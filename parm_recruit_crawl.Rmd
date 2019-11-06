@@ -1,0 +1,670 @@
+---
+title: "데일리팜 리크루트 정보 크롤 "
+output: html_notebook
+---
+
+
+
+```{r}
+###install.packages("RSelenium")
+###library(RSelenium)
+###library(rvest)
+###library(httr)
+###pJS<-wdman::phantomjs(port=4567L)
+###remDr<-remoteDriver(port=4567L, browserName='phantomjs')
+###remDr$open()
+###
+###url<-"http://www.google.com/"
+###remDr$navigate("http://www.google.com/")
+###remDr$screenshot(display=T)
+###remDr$getTitle()[[1]]
+###
+###webElem<-remDr$findElement(using="css", "[name='q']")
+###webElem$sendKeysToElement(list("R Cran"))
+###remDr$screenshot(display=T)
+###
+###webElem$sendKeysToElement(list(key="enter"))
+###remDr$screenshot(display = T)
+###
+###webElems<-remDr$findElements(using='css', 'h')
+###resHeaders<-unlist(lapply(webElems, function(x){x$getElementText()}))
+###resHeaders
+###
+###remDr$quit()
+###pJS$stop()
+```
+
+```{r}
+library(RSelenium)
+library(rvest)
+library(httr)
+library(dplyr)
+library(tibble)
+
+encname<-"euc-kr"
+
+Sys.setlocale("LC_ALL", "C")
+
+url<-"http://recruit.dailypharm.com/Offer/Offer_list.php"
+
+read_html(url,encoding = encname) %>%
+  html_nodes("div.topRecruit_contents") %>%
+  html_nodes("li.top_list") %>%
+  html_nodes("a") %>%
+  html_text()  %>%
+  trimws()-> title
+title
+title<-title[c(1:9, 11:length(title))]
+title
+title<-title[c(1:(length(title)-2))]
+title
+
+read_html(url,encoding = encname) %>%
+  html_nodes("div.topRecruit_contents") %>%
+  html_nodes("li.top_list") %>%
+  html_nodes("a") %>%
+  html_attr("href") -> links
+links
+links<-links[c(1:9, 11:length(links))]
+
+links  
+links<-links[c(1:(length(links)-2))]
+links
+cominfo<-c(); company<-c(); recruit<-c(); period<-c(); period<-c(); link_body<-c(); link_body2<-c(); link_head<-c(); link_head2<-c()
+try({
+  for(i in 1:length(title)) {
+    trimws(title[i])
+    title %>%
+      strsplit("\n") %>%
+      .[[i]] #-> tmp_title
+    
+    print(company<-tmp_title[1])
+    company<-trimws(company)
+    
+    print(recruit<-tmp_title[2])
+    recruit<-trimws(recruit)
+    
+    print(period<-tmp_title[3])
+    period<-trimws(period)
+    
+    url_tar<-"http://recruit.dailypharm.com"
+    url_tar<-paste0(url_tar, links[i])
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.TopDetailBox") %>%
+      html_nodes("div.boxSection") %>%
+      html_nodes("div.boxArea") %>%
+      html_nodes("p.boxTitle") %>%
+      html_text() %>%
+      trimws() -> link_title
+    print(paste0("link_title[",i,"]", link_title))
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.TopDetailBox") %>%
+      html_nodes("div.boxSection") %>%
+      html_nodes("div.boxArea") %>%
+      html_nodes("div.boxList") %>%
+      html_nodes("table") %>%
+      html_nodes("tbody") %>%
+      html_nodes("td.boxHead") %>%
+      html_text() %>%
+      trimws() -> link_head
+    print(paste0("link_head[",i,"]", link_head))
+    
+    if(length(link_head)==7) {link_head<-c(link_head,"홈페이지", "우대")}
+    if(length(link_head)==8) {link_head<-c(link_head,"우대")}
+    if(length(link_head)==9) {link_head<-link_head[c(1:2, 4:9, 3)]}
+    
+    link_head
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.TopDetailBox") %>%
+      html_nodes("div.boxSection") %>%
+      html_nodes("div.boxArea") %>%
+      html_nodes("div.boxList") %>%
+      html_nodes("table") %>%
+      html_nodes("tbody") %>%
+      html_nodes("td.boxbody") %>%
+      html_text() %>%
+      trimws()-> link_body
+    print(paste0("link_body[",i,"]", link_body))
+    
+    if(length(link_body)==7) {link_body<-c(link_body,"-","-")}
+    if(length(link_body)==8) {link_body<-c(link_body,"-")}
+    if(length(link_body)==9) {link_body<-link_body[c(1:2, 4:9,3)]}
+    
+    link_body
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.recruit_wrap") %>%
+      html_nodes("div.ViewBodyContents") %>%
+      html_nodes("table.offerTable") %>%
+      html_nodes("th") %>%
+      html_text() %>%
+      trimws()-> link_head2
+    print(paste0("link_head2[",i,"]", link_head2))
+    
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.recruit_wrap") %>%
+      html_nodes("div.ViewBodyContents") %>%
+      html_nodes("table.offerTable") %>%
+      html_nodes("tbody") %>%
+      html_nodes("tr") %>%
+      html_nodes("td") %>%
+      html_text() %>%
+      trimws()-> link_body2
+    print(paste0("link_body2[",i,"]", link_body2))
+    
+    
+    link_head2<-c(link_head2[c(1,2)], link_body2[c(4,6,8,10)], link_head2[4], link_head[8], "-")
+    link_head2              
+    
+    link_body2<-c(link_body2[c(1:2,5,7,9,11,12)], link_body[8], "-")
+    link_body2
+    
+    Sys.setlocale("LC_ALL", "Korean_Korea.949")
+    
+    cominfo<-rbind(cominfo, tibble(company, recruit, period, link_head, link_body, link_head2, link_body2))
+    print(cominfo)
+  }
+}, silent=F)
+
+cominfo
+
+```
+
+```{r}
+topinfo<-cbind(cominfo, type="TOP")
+topinfo$type<-as.character(topinfo$type)
+str(topinfo)
+
+```
+
+```{r}
+
+encname<-"euc-kr"
+
+Sys.setlocale("LC_ALL", "C")
+
+url<-"http://recruit.dailypharm.com/Offer/Offer_list.php"
+
+read_html(url,encoding = encname) %>%
+  html_nodes("div.hotRecruit_contents") %>%
+  html_nodes("li.hot_list") %>%
+  html_nodes("a") %>%
+  html_text()  %>%
+  trimws()-> title
+title
+title<-title[c(1:9, 11:length(title))]
+title
+title<-title[c(1:(length(title)-2))]
+title
+
+read_html(url,encoding = encname) %>%
+  html_nodes("div.hotRecruit_contents") %>%
+  html_nodes("li.hot_list") %>%
+  html_nodes("a") %>%
+  html_attr("href") -> links
+links
+links<-links[c(1:9, 11:length(links))]
+
+links  
+links<-links[c(1:(length(links)-2))]
+links
+cominfo<-c(); company<-c(); recruit<-c(); period<-c(); period<-c(); link_body<-c(); link_body2<-c(); link_head<-c(); link_head2<-c()
+try({
+  for(i in 1:length(title)) {
+    trimws(title[i])
+    title %>%
+      strsplit("\n") %>%
+      .[[i]] #-> tmp_title
+    
+    print(company<-tmp_title[1])
+    company<-trimws(company)
+    
+    print(recruit<-tmp_title[2])
+    recruit<-trimws(recruit)
+    
+    print(period<-tmp_title[3])
+    period<-trimws(period)
+    
+    url_tar<-"http://recruit.dailypharm.com"
+    url_tar<-paste0(url_tar, links[i])
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.TopDetailBox") %>%
+      html_nodes("div.boxSection") %>%
+      html_nodes("div.boxArea") %>%
+      html_nodes("p.boxTitle") %>%
+      html_text() %>%
+      trimws() -> link_title
+    print(paste0("link_title[",i,"]", link_title))
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.TopDetailBox") %>%
+      html_nodes("div.boxSection") %>%
+      html_nodes("div.boxArea") %>%
+      html_nodes("div.boxList") %>%
+      html_nodes("table") %>%
+      html_nodes("tbody") %>%
+      html_nodes("td.boxHead") %>%
+      html_text() %>%
+      trimws() -> link_head
+    print(paste0("link_head[",i,"]", link_head))
+    
+    if(length(link_head)==7) {link_head<-c(link_head,"홈페이지", "우대")}
+    if(length(link_head)==8) {link_head<-c(link_head,"우대")}
+    if(length(link_head)==9) {link_head<-link_head[c(1:2, 4:9, 3)]}
+    
+    link_head
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.TopDetailBox") %>%
+      html_nodes("div.boxSection") %>%
+      html_nodes("div.boxArea") %>%
+      html_nodes("div.boxList") %>%
+      html_nodes("table") %>%
+      html_nodes("tbody") %>%
+      html_nodes("td.boxbody") %>%
+      html_text() %>%
+      trimws()-> link_body
+    print(paste0("link_body[",i,"]", link_body))
+    
+    if(length(link_body)==7) {link_body<-c(link_body,"-","-")}
+    if(length(link_body)==8) {link_body<-c(link_body,"-")}
+    if(length(link_body)==9) {link_body<-link_body[c(1:2, 4:9,3)]}
+    
+    link_body
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.recruit_wrap") %>%
+      html_nodes("div.ViewBodyContents") %>%
+      html_nodes("table.offerTable") %>%
+      html_nodes("th") %>%
+      html_text() %>%
+      trimws()-> link_head2
+    print(paste0("link_head2[",i,"]", link_head2))
+    
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.recruit_wrap") %>%
+      html_nodes("div.ViewBodyContents") %>%
+      html_nodes("table.offerTable") %>%
+      html_nodes("tbody") %>%
+      html_nodes("tr") %>%
+      html_nodes("td") %>%
+      html_text() %>%
+      trimws()-> link_body2
+    print(paste0("link_body2[",i,"]", link_body2))
+    
+    
+    link_head2<-c(link_head2[c(1,2)], link_body2[c(4,6,8,10)], link_head2[4], link_head[8], "-")
+    link_head2              
+    
+    link_body2<-c(link_body2[c(1:2,5,7,9,11,12)], link_body[8], "-")
+    link_body2
+    
+    Sys.setlocale("LC_ALL", "Korean_Korea.949")
+    
+    cominfo<-rbind(cominfo, tibble(company, recruit, period, link_head, link_body, link_head2, link_body2))
+    print(cominfo)
+  }
+}, silent=F)
+
+cominfo
+
+```
+
+```{r}
+hotinfo<-cbind(cominfo, type="HOT")
+hotinfo$type<-as.character(hotinfo$type)
+str(hotinfo)
+
+```
+
+```{r}
+
+encname<-"euc-kr"
+
+Sys.setlocale("LC_ALL", "C")
+
+url<-"http://recruit.dailypharm.com/Offer/Offer_list.php"
+
+read_html(url,encoding = encname) %>%
+  html_nodes("div.plusRecruit_contents") %>%
+  html_nodes("li.plus_list") %>%
+  html_nodes("a") %>%
+  html_text()  %>%
+  trimws()-> title
+title
+title<-title[c(1:9, 11:length(title))]
+title
+title<-title[c(1:(length(title)-2))]
+title
+
+read_html(url,encoding = encname) %>%
+  html_nodes("div.plusRecruit_contents") %>%
+  html_nodes("li.plus_list") %>%
+  html_nodes("a") %>%
+  html_attr("href") -> links
+links
+links<-links[c(1:9, 11:length(links))]
+
+links  
+links<-links[c(1:(length(links)-2))]
+links
+cominfo<-c(); company<-c(); recruit<-c(); period<-c(); period<-c(); link_body<-c(); link_body2<-c(); link_head<-c(); link_head2<-c()
+try({
+  for(i in 1:length(title)) {
+    trimws(title[i])
+    title %>%
+      strsplit("\n") %>%
+      .[[i]] #-> tmp_title
+    
+    print(company<-tmp_title[1])
+    company<-trimws(company)
+    
+    print(recruit<-tmp_title[2])
+    recruit<-trimws(recruit)
+    
+    print(period<-tmp_title[3])
+    period<-trimws(period)
+    
+    url_tar<-"http://recruit.dailypharm.com"
+    url_tar<-paste0(url_tar, links[i])
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.TopDetailBox") %>%
+      html_nodes("div.boxSection") %>%
+      html_nodes("div.boxArea") %>%
+      html_nodes("p.boxTitle") %>%
+      html_text() %>%
+      trimws() -> link_title
+    print(paste0("link_title[",i,"]", link_title))
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.TopDetailBox") %>%
+      html_nodes("div.boxSection") %>%
+      html_nodes("div.boxArea") %>%
+      html_nodes("div.boxList") %>%
+      html_nodes("table") %>%
+      html_nodes("tbody") %>%
+      html_nodes("td.boxHead") %>%
+      html_text() %>%
+      trimws() -> link_head
+    print(paste0("link_head[",i,"]", link_head))
+    
+    if(length(link_head)==7) {link_head<-c(link_head,"홈페이지", "우대")}
+    if(length(link_head)==8) {link_head<-c(link_head,"우대")}
+    if(length(link_head)==9) {link_head<-link_head[c(1:2, 4:9, 3)]}
+    
+    link_head
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.TopDetailBox") %>%
+      html_nodes("div.boxSection") %>%
+      html_nodes("div.boxArea") %>%
+      html_nodes("div.boxList") %>%
+      html_nodes("table") %>%
+      html_nodes("tbody") %>%
+      html_nodes("td.boxbody") %>%
+      html_text() %>%
+      trimws()-> link_body
+    print(paste0("link_body[",i,"]", link_body))
+    
+    if(length(link_body)==7) {link_body<-c(link_body,"-","-")}
+    if(length(link_body)==8) {link_body<-c(link_body,"-")}
+    if(length(link_body)==9) {link_body<-link_body[c(1:2, 4:9,3)]}
+    
+    link_body
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.recruit_wrap") %>%
+      html_nodes("div.ViewBodyContents") %>%
+      html_nodes("table.offerTable") %>%
+      html_nodes("th") %>%
+      html_text() %>%
+      trimws()-> link_head2
+    print(paste0("link_head2[",i,"]", link_head2))
+    
+    
+    read_html(url_tar,encoding = encname) %>%
+      html_nodes("div#container") %>%
+      html_nodes("div.recruit_wrap") %>%
+      html_nodes("div.ViewBodyContents") %>%
+      html_nodes("table.offerTable") %>%
+      html_nodes("tbody") %>%
+      html_nodes("tr") %>%
+      html_nodes("td") %>%
+      html_text() %>%
+      trimws()-> link_body2
+    print(paste0("link_body2[",i,"]", link_body2))
+    
+    
+    link_head2<-c(link_head2[c(1,2)], link_body2[c(4,6,8,10)], link_head2[4], link_head[8], "-")
+    link_head2              
+    
+    link_body2<-c(link_body2[c(1:2,5,7,9,11,12)], link_body[8], "-")
+    link_body2
+    
+    Sys.setlocale("LC_ALL", "Korean_Korea.949")
+    
+    cominfo<-rbind(cominfo, tibble(company, recruit, period, link_head, link_body, link_head2, link_body2))
+    print(cominfo)
+  }
+}, silent=F)
+
+cominfo
+
+
+```
+
+
+```{r}
+plusinfo<-cbind(cominfo, type="PLUS")
+plusinfo$type<-as.character(plusinfo$type)
+str(plusinfo)
+
+```
+
+
+
+```{r}
+
+
+encname<-"euc-kr"
+
+Sys.setlocale("LC_ALL", "C")
+
+
+
+baseurl<-"http://recruit.dailypharm.com/Offer/Offer_list.php"
+
+valpageno<-1
+page<-0
+while(valpageno!=0)
+{
+  page<-page+1
+  pageurl<-paste0(baseurl, "?page=",page)
+  read_html(pageurl,encoding = encname) %>%
+  html_nodes("div.search_tab") %>%
+  length() -> valpageno
+}
+page
+maxpage<-(page-1)
+
+
+cominfo2<-c()
+for(i in 1:maxpage) {
+  
+  url<-paste0(baseurl, "?page=",i)
+  url
+
+  read_html(url,encoding = encname) %>%
+    html_nodes("div.search_tab") %>%
+    html_nodes("li.search_tabCont_wrap") %>%
+    html_nodes("a") %>%
+    html_text()  %>%
+    trimws()-> title  
+  title
+  #title<-title[c(1:9, 11:length(title))]
+  #title
+  #title<-title[c(1:(length(title)-2))]
+  #title
+  
+  read_html(url,encoding = encname) %>%
+    html_nodes("div.search_tab") %>%
+    html_nodes("li.search_tabCont_wrap") %>%
+    html_nodes("a") %>%
+    html_attr("href") -> links
+  links
+  #links<-links[c(1:9, 11:length(links))]
+  
+  #links  
+  #links<-links[c(1:(length(links)-2))]
+  #links
+  cominfo<-c(); company<-c(); recruit<-c(); period<-c(); period<-c(); link_body<-c(); link_body2<-c(); link_head<-c(); link_head2<-c()
+  try({
+    for(i in 1:length(title)) {
+      trimws(title[i])
+      title %>%
+        strsplit("\n") %>%
+        .[[i]] -> tmp_title
+      
+      print(company<-tmp_title[1])
+      company<-trimws(company)
+      
+      print(recruit<-tmp_title[2])
+      recruit<-trimws(recruit)
+      
+      print(period<-tmp_title[7])
+      period<-trimws(period)
+      
+      url_tar<-"http://recruit.dailypharm.com"
+      url_tar<-paste0(url_tar, links[i])
+      
+      read_html(url_tar,encoding = encname) %>%
+        html_nodes("div#container") %>%
+        html_nodes("div.TopDetailBox") %>%
+        html_nodes("div.boxSection") %>%
+        html_nodes("div.boxArea") %>%
+        html_nodes("p.boxTitle") %>%
+        html_text() %>%
+        trimws() -> link_title
+      print(paste0("link_title[",i,"]", link_title))
+      
+      read_html(url_tar,encoding = encname) %>%
+        html_nodes("div#container") %>%
+        html_nodes("div.TopDetailBox") %>%
+        html_nodes("div.boxSection") %>%
+        html_nodes("div.boxArea") %>%
+        html_nodes("div.boxList") %>%
+        html_nodes("table") %>%
+        html_nodes("tbody") %>%
+        html_nodes("td.boxHead") %>%
+        html_text() %>%
+        trimws() -> link_head
+      print(paste0("link_head[",i,"]", link_head))
+      
+      if(length(link_head)==7) {link_head<-c(link_head,"홈페이지", "우대")}
+      if(length(link_head)==8) {link_head<-c(link_head,"우대")}
+      if(length(link_head)==9) {link_head<-link_head[c(1:2, 4:9, 3)]}
+      
+      link_head
+      
+      read_html(url_tar,encoding = encname) %>%
+        html_nodes("div#container") %>%
+        html_nodes("div.TopDetailBox") %>%
+        html_nodes("div.boxSection") %>%
+        html_nodes("div.boxArea") %>%
+        html_nodes("div.boxList") %>%
+        html_nodes("table") %>%
+        html_nodes("tbody") %>%
+        html_nodes("td.boxbody") %>%
+        html_text() %>%
+        trimws()-> link_body
+      print(paste0("link_body[",i,"]", link_body))
+      
+      if(length(link_body)==7) {link_body<-c(link_body,"-","-")}
+      if(length(link_body)==8) {link_body<-c(link_body,"-")}
+      if(length(link_body)==9) {link_body<-link_body[c(1:2, 4:9,3)]}
+      
+      link_body
+      
+      read_html(url_tar,encoding = encname) %>%
+        html_nodes("div#container") %>%
+        html_nodes("div.recruit_wrap") %>%
+        html_nodes("div.ViewBodyContents") %>%
+        html_nodes("table.offerTable") %>%
+        html_nodes("th") %>%
+        html_text() %>%
+        trimws()-> link_head2
+      print(paste0("link_head2[",i,"]", link_head2))
+      
+      
+      read_html(url_tar,encoding = encname) %>%
+        html_nodes("div#container") %>%
+        html_nodes("div.recruit_wrap") %>%
+        html_nodes("div.ViewBodyContents") %>%
+        html_nodes("table.offerTable") %>%
+        html_nodes("tbody") %>%
+        html_nodes("tr") %>%
+        html_nodes("td") %>%
+        html_text() %>%
+        trimws()-> link_body2
+      print(paste0("link_body2[",i,"]", link_body2))
+      
+      
+      link_head2<-c(link_head2[c(1,2)], link_body2[c(4,6,8,10)], link_head2[4], link_head[8], "-")
+      link_head2              
+      
+      link_body2<-c(link_body2[c(1:2,5,7,9,11,12)], link_body[8], "-")
+      link_body2
+      
+      Sys.setlocale("LC_ALL", "Korean_Korea.949")
+      
+      cominfo<-rbind(cominfo, tibble(company, recruit, period, link_head, link_body, link_head2, link_body2))
+      print(cominfo)
+    }
+  }, silent=F)
+  
+  cominfo2<-rbind(cominfo2, cominfo)
+  
+  }
+
+
+```
+
+```{r}
+norminfo<-cbind(cominfo2, type="NORM")
+norminfo$type<-as.character(norminfo$type)
+str(norminfo)
+
+```
+
+```{r}
+parm_data<-c()
+parm_data<-rbind(topinfo, hotinfo, plusinfo, norminfo)
+str(parm_data)
+
+write.csv(parm_data, "parm_data.csv")
+
+
+
+```
+
